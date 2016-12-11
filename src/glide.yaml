@@ -1,0 +1,5 @@
+package: .
+import:
+- package: github.com/grpc/grpc-go
+  version: ^1.0.5
+- package: github.com/golang/protobuf

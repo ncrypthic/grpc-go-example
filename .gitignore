@@ -1,0 +1,4 @@
+.envrc
+bin/
+pkg/
+src/vendor/

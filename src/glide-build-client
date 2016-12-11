@@ -1,0 +1,63 @@
+#!/bin/sh
+MAIN=`pwd`/client/main.go
+GO=`which go`
+PROTOC=`which protoc`
+GLIDE=`which glide`
+SRC=$GOPATH/src
+
+if [[ $GO == "" ]]; then
+    echo "\`go\` is not installed, please install go <golang.org> first."
+    exit 0
+fi
+
+if [[ $PROTOC == "" ]]; then
+    echo "protobuf compiler not found. Please make sure \`protoc\` is installed."
+    exit 0
+fi
+
+if [[ ! -f $GOPATH/bin/protoc-gen-go ]]; then
+    $GLIDE install
+    echo "Generating \`protoc-gen-go\` plugin"
+    cd $SRC/vendor/github.com/golang/protobuf/protoc-gen-go
+    $GO install
+fi
+
+gen_proto() {
+    local PROTO_DIRS=`ls -d $GOPATH/proto/*`
+    local PACKAGE=""
+
+    echo "Generating protobuf files..."
+    for d in $PROTO_DIRS; do
+        local DIRNAME=$(dirname $d)
+        local PROTO_FILES=`find $d -type f -iname *.proto`
+        local INPUT=""
+        local TARGET_DIR=`basename $d`
+
+        for f in $PROTO_FILES; do
+            INPUT+=" $f "
+        done
+
+        #mkdir -p $SRC/vendor/github.com/salestock/ssource/pb/$TARGET_DIR
+
+        echo "Generate protobuf $TARGET_DIR"
+
+        $PROTOC -I $DIRNAME $INPUT --go_out=plugins=grpc:$SRC
+    done
+}
+
+
+build() {
+    gen_proto
+    cd `dirname $MAIN`
+    local TARGET_FILE=$(basename $(dirname $MAIN))
+    echo "Compiling $MAIN to $GOBIN/$TARGET_FILE"
+    $GO install
+    if [[ -f $GOBIN/$TARGET_FILE ]]; then
+        echo "Compiling Done..."
+    else
+        echo "Something wrong, compiling \`$TARGET_FILE\` failed..."
+    fi
+}
+
+build
+
